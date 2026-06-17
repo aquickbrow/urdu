@@ -1,0 +1,42 @@
+==========================================================
+ UrduNewsDaily — UPLOAD CHECKLIST (v5)
+ Do these in order. Don't skip the verify step.
+==========================================================
+
+[ ] 1. DELETE old files in the GitHub repo (trash icon → commit):
+       - main.py
+       - buildozer.spec
+       - .github/workflows/build-android.yml
+
+[ ] 2. UPLOAD these 5 files (Add file → Upload files → drag → commit):
+       - main.py
+       - urdu_shaper.py
+       - buildozer.spec
+       - README.md
+       - NotoNastaliqUrdu-Regular.ttf
+
+[ ] 3. RE-CREATE the workflow by hand (drag-upload skips hidden folders):
+       - Add file → Create new file
+       - Filename (type exactly, slashes make folders):
+            .github/workflows/build-android.yml
+       - Paste the contents of build-android.yml from this folder
+       - Commit new file
+
+[ ] 4. VERIFY before running — open buildozer.spec IN THE REPO and confirm:
+            requirements = python3,kivy==2.3.0,requests,feedparser==6.0.11,...
+       If you DONT see feedparser==6.0.11 in requirements, AND buildozer==1.5.0 + p4a v2024.01.21 git tag (Python 3.11, not 3.14)
+
+[ ] 5. RUN: Actions tab → Build Android APK → Run workflow. ~12 min.
+
+[ ] 6. RESULT:
+       - GREEN  → Summary → Artifacts → UrduNewsDaily-APK → download → unzip → install
+       - RED    → Summary → Artifacts → build-log → download → unzip →
+                  search for "No matching distribution" / "use_2to3" / "ERROR:"
+                  → send the 30 lines around the first hit
+
+==========================================================
+ WHAT v5 FIXES (so you know it's the real fix):
+ - Buildozer pinned to 1.5.0 + p4a 2024.1.21 (host+target python BOTH 3.11)
+ - feedparser pinned to 6.0.11  (old version used invalid use_2to3)
+ - workflow now FAILS LOUDLY if no APK — no more false greens
+==========================================================
