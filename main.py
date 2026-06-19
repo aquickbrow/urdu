@@ -580,16 +580,86 @@ class UrduNewsApp(App):
         self.status.text = msg
 
 
+def _ensure_urdufont_registered():
+    """Guarantee the 'UrduFont' name always resolves, so no Label crashes."""
+    try:
+        # If already registered, nothing to do.
+        if "UrduFont" in LabelBase._fonts:
+            return
+    except Exception:
+        pass
+    here = os.path.dirname(os.path.abspath(__file__))
+    for fpath in (os.path.join(here, "NotoNastaliqUrdu-Regular.ttf"),
+                  "NotoNastaliqUrdu-Regular.ttf"):
+        try:
+            if os.path.exists(fpath):
+                LabelBase.register(name="UrduFont", fn_regular=fpath)
+                return
+        except Exception:
+            continue
+    # Could not find the TTF — alias UrduFont to Kivy's default so labels
+    # using font_name="UrduFont" still render (just not in Nastaliq).
+    try:
+        LabelBase.register(name="UrduFont",
+                           fn_regular=LabelBase._fonts['Roboto']['regular'])
+    except Exception:
+        pass
+
+
+# Run the guarantee at import time, before any widget is built.
+_ensure_urdufont_registered()
+
+
 # Register bundled Urdu font (file shipped alongside main.py)
 def _register_font():
-    for fname in ("NotoNastaliqUrdu-Regular.ttf", "urdu.ttf"):
-        if os.path.exists(fname):
-            LabelBase.register(name="UrduFont", fn_regular=fname)
-            return
-    # fallback to default so app still launches
-    LabelBase.register(name="UrduFont", fn_regular="Roboto")
+    # On Android the cwd is NOT the app dir; resolve paths relative to THIS file.
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(here, "NotoNastaliqUrdu-Regular.ttf"),
+        os.path.join(here, "urdu.ttf"),
+        "NotoNastaliqUrdu-Regular.ttf",
+        "urdu.ttf",
+    ]
+    for fpath in candidates:
+        try:
+            if os.path.exists(fpath):
+                LabelBase.register(name="UrduFont", fn_regular=fpath)
+                return
+        except Exception:
+            continue
+    # Last resort: register the default font FILE if we can find it, else
+    # just alias UrduFont to the built-in 'Roboto' name WITHOUT a file path.
+    try:
+        from kivy.core.text import DEFAULT_FONT
+        LabelBase.register(name="UrduFont",
+                           fn_regular=LabelBase._fonts.get(DEFAULT_FONT, {}).get(
+                               'regular', None) or "Roboto")
+    except Exception:
+        # If even that fails, don't crash — Kivy will use its default for
+        # any label whose font_name can't be resolved.
+        pass
+
+
+def _write_crash(exc_text):
+    """Write a crash reason to a readable file so we can diagnose."""
+    try:
+        d = os.path.join(os.path.expanduser("~"), "UrduNewsDaily")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "last_crash.txt"), "w", encoding="utf-8") as f:
+            f.write(exc_text)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
-    _register_font()
-    UrduNewsApp().run()
+    import traceback
+    try:
+        _register_font()
+    except Exception:
+        _write_crash("FONT REGISTRATION FAILED:\n" + traceback.format_exc())
+        # Carry on — a missing custom font must never block launch.
+    try:
+        UrduNewsApp().run()
+    except Exception:
+        _write_crash("APP RUN FAILED:\n" + traceback.format_exc())
+        raise
